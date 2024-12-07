@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Camera & Location Access</title>
+  <title>Camera Feed</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
     video { border: 1px solid #ccc; margin-top: 10px; }
@@ -11,25 +11,14 @@
   </style>
 </head>
 <body>
-  <h1>Camera Feed, IP Address, and Location Data</h1>
+  <h1>Camera Feed</h1>
   
   <video id="video" width="640" height="480" autoplay></video>
-  <p id="ip"></p>
-  <p id="location"></p>
   
   <button onclick="captureSnapshot()">Capture Snapshot</button>
   <canvas id="canvas" style="display:none;"></canvas>
 
   <script>
-    // Get and display IP address and location
-    fetch('/').then(response => {
-      return response.text();
-    }).then(data => {
-      // Extract IP and Location from the server's response
-      document.getElementById('ip').innerText = 'IP Address: ' + data.match(/Client IP: (.*)/)[1];
-      document.getElementById('location').innerText = 'Location: ' + data.match(/Client Location: (.*)/)[1];
-    });
-
     // Get access to the camera
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(function (stream) {
@@ -55,6 +44,10 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: dataURL })
+      }).then(response => {
+        console.log('Image uploaded successfully');
+      }).catch(error => {
+        console.log('Error uploading image:', error);
       });
     }
   </script>
