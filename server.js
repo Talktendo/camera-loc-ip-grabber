@@ -1,35 +1,37 @@
 const express = require('express');
 const app = express();
-const port = 3000;
+const fs = require('fs');
 const bodyParser = require('body-parser');
 const path = require('path');
 
-// Serve static files (like client-side HTML)
-app.use(express.static(__dirname));
+const port = 3000;
 
 // To handle large image data (base64)
 app.use(bodyParser.json({ limit: '10mb' }));
 
-// Serve HTML page
-app.get('/', (req, res) => {
-  // Get client IP
-  const ip = req.ip || req.connection.remoteAddress;
-  console.log(`Client IP: ${ip}`);  // Log the IP to the console
+// Serve static files (like client-side HTML)
+app.use(express.static(__dirname));
 
-  // Get location (for now, we'll use the IP address as the "location")
-  const location = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  console.log(`Client Location: ${location}`);  // Log the location to the console
-
-  // Serve the HTML page without sending IP/location to the frontend
-  res.sendFile(path.resolve(__dirname, 'index.html'));
-});
-
-// Handle image data from the camera
+// Endpoint to receive the image data and save it to a file
 app.post('/upload', (req, res) => {
   const imageData = req.body.image;  // Get the base64 image data
-  console.log(`Received Image Data: ${imageData.substring(0, 100)}...`);  // Log part of the image data
+  console.log('Received Image Data:', imageData.substring(0, 100) + '...');  // Log part of the image data
 
-  res.send('Image received');
+  // Remove the base64 metadata (data:image/jpeg;base64,)
+  const base64Data = imageData.replace(/^data:image\/jpeg;base64,/, '');
+
+  // Generate a unique filename for each image (you can use timestamp or UUID)
+  const fileName = `image_${Date.now()}.jpg`;
+
+  // Save the image to the server's file system
+  fs.writeFile(`./uploads/${fileName}`, base64Data, 'base64', (err) => {
+    if (err) {
+      console.error('Error saving image:', err);
+      return res.status(500).send('Error saving image');
+    }
+    console.log('Image saved as:', fileName);
+    res.send('Image received and saved');
+  });
 });
 
 // Start the server
