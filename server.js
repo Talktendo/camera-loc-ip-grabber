@@ -23,8 +23,10 @@ app.post('/upload', (req, res) => {
   // Generate a unique filename for each image (you can use timestamp or UUID)
   const fileName = `image_${Date.now()}.jpg`;
 
-  // Save the image to the server's file system
-  fs.writeFile(`./uploads/${fileName}`, base64Data, 'base64', (err) => {
+  // Save the image to the server's 'uploads' folder
+  const filePath = path.join(__dirname, 'uploads', fileName);  // Use path.join to handle paths correctly
+
+  fs.writeFile(filePath, base64Data, 'base64', (err) => {
     if (err) {
       console.error('Error saving image:', err);
       return res.status(500).send('Error saving image');
