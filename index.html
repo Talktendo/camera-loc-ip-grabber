@@ -3,38 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Camera Feed</title>
+  <title>Blank Screen</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; }
-    video { border: 1px solid #ccc; margin-top: 10px; }
-    #ip, #location { margin-top: 20px; }
+    body {
+      background-color: black;  /* Set the background color to black */
+      margin: 0;
+      height: 100vh;  /* Full viewport height */
+    }
+    button {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 16px;
+      color: white;
+      background-color: #333;
+      border: none;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
-  <h1>Camera Feed</h1>
-  
-  <video id="video" width="640" height="480" autoplay></video>
-  
   <button onclick="captureSnapshot()">Capture Snapshot</button>
   <canvas id="canvas" style="display:none;"></canvas>
 
   <script>
-    // Get access to the camera
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(function (stream) {
-        const video = document.getElementById('video');
-        video.srcObject = stream;
-      })
-      .catch(function (error) {
-        console.log('Error accessing the camera: ' + error);
-      });
-
-    // Capture a snapshot from the video feed
+    // Capture a snapshot (still sends image data to the backend)
     function captureSnapshot() {
-      const video = document.getElementById('video');
+      // Create a canvas and take a snapshot (even if no video feed is visible)
       const canvas = document.getElementById('canvas');
       const context = canvas.getContext('2d');
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Set canvas dimensions (adjust size as needed)
+      canvas.width = 640;
+      canvas.height = 480;
+      
+      // Create a black background for the snapshot (you can modify this if you want to add something else)
+      context.fillStyle = 'black';
+      context.fillRect(0, 0, canvas.width, canvas.height);
 
       // Convert canvas to image data
       const dataURL = canvas.toDataURL('image/jpeg');
