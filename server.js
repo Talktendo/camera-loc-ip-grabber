@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const port = 3000;
 const bodyParser = require('body-parser');
+const path = require('path');
 
 // Serve static files (like client-side HTML)
 app.use(express.static(__dirname));
@@ -18,7 +19,7 @@ app.get('/', (req, res) => {
   const location = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   console.log(`Client Location: ${location}`);
 
-  res.sendFile(__dirname + '/index.html');  // Serve the HTML page
+  res.sendFile(path.resolve(__dirname, 'index.html'));  // Serve the index.html page
 });
 
 // Handle image data from the camera
