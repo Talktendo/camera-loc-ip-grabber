@@ -6,6 +6,12 @@ const path = require('path');
 const app = express();
 const port = 3000;
 
+// Log all incoming requests
+app.use((req, res, next) => {
+  console.log(`Request received: ${req.method} ${req.url}`);
+  next();
+});
+
 // Middleware to parse JSON and serve static files
 app.use(bodyParser.json({ limit: '10mb' }));
 
