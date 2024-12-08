@@ -22,6 +22,11 @@ cloudinary.config({
 // Middleware to parse JSON and handle large image data
 app.use(bodyParser.json({ limit: '10mb' }));
 
+// Serve the index.html file for the root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));  // Serve the index.html file
+});
+
 // Endpoint to upload images to Cloudinary
 app.post('/upload', (req, res) => {
   const imageData = req.body.image;  // get the base64 image data
