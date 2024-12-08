@@ -1,5 +1,5 @@
-// Load environment variables
-require('dotenv').config();
+// Load environment variables from the custom 'cloudinary' file
+require('dotenv').config({ path: './cloudinary' });
 
 const express = require('express');
 const bodyParser = require('body-parser');
