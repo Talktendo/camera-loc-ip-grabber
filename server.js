@@ -1,20 +1,22 @@
-// Load environment variables from the custom 'cloudinary' file
+// Load environment variables from custom 'cloudinary' file
 require('dotenv').config({ path: './cloudinary' });
 
 const express = require('express');
 const bodyParser = require('body-parser');
 const cloudinary = require('cloudinary').v2;
-const fs = require('fs');
 const path = require('path');
 
 const app = express();
 const port = 3000;
 
+// Log the API secret for troubleshooting (optional, remove in production)
+console.log('Cloudinary API Secret:', process.env.CLOUDINARY_API_SECRET);
+
 // Configure Cloudinary with environment variables
 cloudinary.config({
   cloud_name: 'dleojqvuk',  // your Cloudinary cloud name
   api_key: '244153894123468',  // your Cloudinary API key
-  api_secret: process.env.CLOUDINARY_API_SECRET  // use the secret from environment variables
+  api_secret: 'hGZbdy0WjG_0iaUoE72taSVJYRA'  // the API secret you provided
 });
 
 // Middleware to parse JSON and handle large image data
@@ -36,7 +38,7 @@ app.post('/upload', (req, res) => {
   });
 });
 
-// Serve static files (like index.html or images) in production
+// Serve static files (like images or other assets)
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Start the server
