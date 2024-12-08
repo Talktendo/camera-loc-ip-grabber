@@ -15,6 +15,11 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir);
 }
 
+// Serve the index.html file for the root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // Endpoint to save image
 app.post('/upload', (req, res) => {
   const imageData = req.body.image;
