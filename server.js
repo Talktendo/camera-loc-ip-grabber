@@ -1,63 +1,43 @@
+// Load environment variables
+require('dotenv').config();
+
 const express = require('express');
-const fs = require('fs');
 const bodyParser = require('body-parser');
+const cloudinary = require('cloudinary').v2;
+const fs = require('fs');
 const path = require('path');
 
 const app = express();
 const port = 3000;
 
-// Log all incoming requests
-app.use((req, res, next) => {
-  console.log(`Request received: ${req.method} ${req.url}`);
-  next();
+// Configure Cloudinary with environment variables
+cloudinary.config({
+  cloud_name: 'dleojqvuk',  // your Cloudinary cloud name
+  api_key: '244153894123468',  // your Cloudinary API key
+  api_secret: process.env.CLOUDINARY_API_SECRET  // use the secret from environment variables
 });
 
-// Middleware to parse JSON and serve static files
+// Middleware to parse JSON and handle large image data
 app.use(bodyParser.json({ limit: '10mb' }));
 
-// Ensure the uploads folder exists
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
-
-// Serve the index.html file for the root route
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Endpoint to save image
+// Endpoint to upload images to Cloudinary
 app.post('/upload', (req, res) => {
-  const imageData = req.body.image;
-  const base64Data = imageData.replace(/^data:image\/jpeg;base64,/, '');
-  const fileName = `image_${Date.now()}.jpg`;
-  const filePath = path.join(uploadsDir, fileName);
+  const imageData = req.body.image;  // get the base64 image data
+  const base64Data = imageData.replace(/^data:image\/jpeg;base64,/, '');  // strip out the base64 prefix
 
-  fs.writeFile(filePath, base64Data, 'base64', (err) => {
-    if (err) {
-      console.error('Error saving image:', err);
-      return res.status(500).send('Error saving image');
+  // Upload image to Cloudinary
+  cloudinary.uploader.upload(`data:image/jpeg;base64,${base64Data}`, (error, result) => {
+    if (error) {
+      console.error('Error uploading to Cloudinary:', error);
+      return res.status(500).send('Error uploading image');
     }
-    console.log('Saved image:', fileName);
-    res.send('Image saved');
+    console.log('Uploaded image to Cloudinary:', result);
+    res.send({ imageUrl: result.secure_url });  // send the uploaded image URL back to the client
   });
 });
 
-// Endpoint to save location
-app.post('/location', (req, res) => {
-  const { latitude, longitude } = req.body;
-  const logFile = path.join(uploadsDir, 'locations.log');
-  const logEntry = `${new Date().toISOString()} - Latitude: ${latitude}, Longitude: ${longitude}\n`;
-
-  fs.appendFile(logFile, logEntry, (err) => {
-    if (err) {
-      console.error('Error saving location:', err);
-      return res.status(500).send('Error saving location');
-    }
-    console.log('Saved location:', logEntry.trim());
-    res.send('Location saved');
-  });
-});
+// Serve static files (like index.html or images) in production
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Start the server
 app.listen(port, () => {
