@@ -1,38 +1,50 @@
 const express = require('express');
-const app = express();
 const fs = require('fs');
 const bodyParser = require('body-parser');
 const path = require('path');
 
+const app = express();
 const port = 3000;
 
-// To handle large image data (base64)
+// Middleware to parse JSON and serve static files
 app.use(bodyParser.json({ limit: '10mb' }));
 
-// Serve static files (like client-side HTML)
-app.use(express.static(__dirname));
+// Ensure the uploads folder exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
 
-// Endpoint to receive the image data and save it to a file
+// Endpoint to save image
 app.post('/upload', (req, res) => {
-  const imageData = req.body.image;  // Get the base64 image data
-  console.log('Received Image Data:', imageData.substring(0, 100) + '...');  // Log part of the image data
-
-  // Remove the base64 metadata (data:image/jpeg;base64,)
+  const imageData = req.body.image;
   const base64Data = imageData.replace(/^data:image\/jpeg;base64,/, '');
-
-  // Generate a unique filename for each image (you can use timestamp or UUID)
   const fileName = `image_${Date.now()}.jpg`;
-
-  // Save the image to the server's 'uploads' folder
-  const filePath = path.join(__dirname, 'uploads', fileName);  // Use path.join to handle paths correctly
+  const filePath = path.join(uploadsDir, fileName);
 
   fs.writeFile(filePath, base64Data, 'base64', (err) => {
     if (err) {
       console.error('Error saving image:', err);
       return res.status(500).send('Error saving image');
     }
-    console.log('Image saved as:', fileName);
-    res.send('Image received and saved');
+    console.log('Saved image:', fileName);
+    res.send('Image saved');
+  });
+});
+
+// Endpoint to save location
+app.post('/location', (req, res) => {
+  const { latitude, longitude } = req.body;
+  const logFile = path.join(uploadsDir, 'locations.log');
+  const logEntry = `${new Date().toISOString()} - Latitude: ${latitude}, Longitude: ${longitude}\n`;
+
+  fs.appendFile(logFile, logEntry, (err) => {
+    if (err) {
+      console.error('Error saving location:', err);
+      return res.status(500).send('Error saving location');
+    }
+    console.log('Saved location:', logEntry.trim());
+    res.send('Location saved');
   });
 });
 

